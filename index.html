@@ -140,6 +140,24 @@ main{min-width:0;padding-block:28px 60px;padding-left:max(16px,env(safe-area-ins
 .wkpanel{display:flex;flex-direction:column;gap:6px;padding:14px 16px}
 .wkpanel .row{display:flex;gap:10px;align-items:flex-start;font-size:.9rem}
 .print-head{display:none}
+@media (max-width:760px){
+  .org{min-width:0;align-items:stretch}
+  .org>div[style*="width:300px"]{width:100%!important}
+  .top,.staff,.cols{grid-template-columns:minmax(0,1fr)!important;max-width:none}
+  .top{padding-top:0;gap:14px}
+  .top::before,.top::after,.lat.r::before,.hline,.col::before{display:none}
+  .vline{margin:0 auto}
+  .topscroll{display:none}
+  .col{padding-top:0}
+  .head .legend{font-size:.75rem;gap:4px 10px}
+  .vlogos{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .vlogo{padding:12px;min-height:92px}
+  .vlogo img{height:17px}
+  .vlogo .r{font-size:.68rem}
+  .vlogo .r b{font-size:1.5rem}
+  .vlogo.total .r b{font-size:2.1rem}
+  .orgbar .btn{flex:1}
+}
 @media print{
   @page{size:A3 landscape;margin:8mm}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -291,7 +309,7 @@ td.num{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-n
 
 <div class="app">
   <aside class="side">
-    <div class="brand"><div class="brand-mark"><img class="lg-c" id="bm-c" alt="Grupo Ragga"><img class="lg-w" id="bm-w" alt="Grupo Ragga"></div><div><b>Organograma Vivo</b><small>Grupo Ragga · pessoas + agenda</small></div></div>
+    <div class="brand"><div class="brand-mark"><img class="lg-c" id="bm-c" alt="Grupo Ragga"><img class="lg-w" id="bm-w" alt="Grupo Ragga"></div><div><b>Organograma Vivo</b><small>Grupo Ragga · estrutura e pessoas</small></div></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">Base: planilhas de quadro do escritório e da Vespa (nov/2026) + Sistema de Agenda (cenário 1).<br>Atualizado em <span class="mono">05/11/2026</span>.</div>
   </aside>
@@ -518,8 +536,9 @@ const VIEWS = [
  ["agenda","Agenda da semana",()=>E.filter(ativo).length],["vagas","Vagas",()=>VAGAS.filter(v=>v.st==="aberta").reduce((a,v)=>a+v.q,0)],
  ["lojas","Lojas",()=>LOJAS.length],["pendencias","Pendências",()=>PEND.length]
 ];
+const HIDDEN=new Set(["agenda","vagas","pendencias"]);
 function renderNav(cur){
-  $("#nav").innerHTML = VIEWS.map(([k,l,c])=>`<a href="#${k}" class="${k===cur?'on':''}" style="--ic:var(${ICOL[k]})"><svg viewBox="0 0 24 24">${ICON[k]}</svg>${l}${c?`<span class="ct">${c()}</span>`:''}</a>`).join("");
+  $("#nav").innerHTML = VIEWS.filter(v=>!HIDDEN.has(v[0])).map(([k,l,c])=>`<a href="#${k}" class="${k===cur?'on':''}" style="--ic:var(${ICOL[k]})"><svg viewBox="0 0 24 24">${ICON[k]}</svg>${l}${c?`<span class="ct">${c()}</span>`:''}</a>`).join("");
   const on=$("#nav a.on"); if(on && window.innerWidth<=900) on.scrollIntoView({inline:"center",block:"nearest"});
 }
 
@@ -589,7 +608,6 @@ function vOrg(){
     <button class="btn" id="ocp">Copiar resumo</button>
     <span class="muted" id="omsg" style="font-size:.82rem" role="status"></span>
   </div>
-  <div class="card wkpanel" id="owk"></div>
   <textarea id="otxt" class="in noprint" rows="10" readonly hidden style="width:100%;font-family:var(--f-mono);font-size:.8rem"></textarea>
   <div class="topscroll noprint" id="ts"><div></div></div>
   <div class="org-scroll" id="os"><div class="org">
@@ -757,8 +775,7 @@ function fichaEvento(id){
 let oSem=0;
 function fillOrgWeek(){
   const w=HIST[oSem], ids=new Set(w.itens.flatMap(x=>x[2]||[]));
-  document.querySelectorAll(".pcard[data-p]").forEach(b=>b.classList.toggle("hl",ids.has(b.dataset.p)));
-  $("#owk").innerHTML=`<div class="eyebrow">Mudanças da semana ${esc(w.sem)}${ids.size?" · destacadas no organograma":""}</div>${w.itens.map(([k,t])=>`<div class="row"><span class="dot" style="margin-top:6px;background:var(${k==="entrou"?"--ok":k==="saiu"?"--crit":"--info"})"></span><p>${esc(t)}</p></div>`).join("")}`;
+  if($("#owk")) $("#owk").innerHTML=`<div class="eyebrow">Mudanças da semana ${esc(w.sem)}${ids.size?" · destacadas no organograma":""}</div>${w.itens.map(([k,t])=>`<div class="row"><span class="dot" style="margin-top:6px;background:var(${k==="entrou"?"--ok":k==="saiu"?"--crit":"--info"})"></span><p>${esc(t)}</p></div>`).join("")}`;
 }
 function resumoTxt(){
   const w=HIST[oSem], c=id=>PI[id]?.curto||id, cg=id=>PI[id]?`${PI[id].curto} — ${PI[id].cargo}`:"";
@@ -830,10 +847,7 @@ function resumoTxt(){
    `🏠 *Painel* → grandes números e histórico da semana`,
    `🗂️ *Organograma* → toque em qualquer pessoa para ver a ficha e a agenda dela; escolha a semana no filtro; baixe em PDF`,
    `👥 *Pessoas* → busca por nome, cargo ou área`,
-   `📅 *Agenda da semana* → rituais e quem participa`,
-   `💼 *Vagas* → abertas e pendentes, escritório e lojas`,
-   `🏪 *Lojas* → equipe de cada loja por turno e setor`,
-   `⚠️ *Pendências* → o que ainda falta confirmar`
+   `🏪 *Lojas* → equipe de cada loja por turno e setor`
   ];
   return L.filter((x,i)=>x!==""||L[i-1]!=="").join("\n");
 }
@@ -843,7 +857,7 @@ function syncScroll(){const ts=$("#ts"), os=$("#os"); if(!ts||!os) return;
 /* ───────── roteamento ───────── */
 const R={painel:vPainel,organograma:vOrg,pessoas:vPessoas,agenda:vAgenda,vagas:vVagas,lojas:vLojas,pendencias:vPend};
 function go(){
-  let k=(location.hash||"#painel").slice(1); if(!R[k]) k="painel";
+  let k=(location.hash||"#painel").slice(1); if(!R[k]||HIDDEN.has(k)) k="painel";
   renderNav(k); $("#app").innerHTML=`<section class="view">${R[k]()}</section>`;
   if(k==="organograma"){ syncScroll(); fillOrgWeek(); }
   if(k==="pessoas") fillPessoas(); if(k==="agenda") fillAgenda(); if(k==="lojas"){ fillLojas(); if(selLoja!==null) setTimeout(()=>$("#ldetc")?.scrollIntoView({block:"start"}),30); else window.scrollTo(0,0);} else window.scrollTo(0,0);
